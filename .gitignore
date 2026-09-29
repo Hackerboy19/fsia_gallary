@@ -8,3 +8,8 @@ dist-ssr
 .DS_Store
 *.log
 .vite
+
+# Contact form SMTP credentials — never commit the real one
+mail-config.php
+contact-submissions.log
+contact-mail-errors.log
