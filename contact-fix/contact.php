@@ -17,7 +17,15 @@ $sent_to_name = "";
 // ---------------------------------------------------------------------------
 // 1. Process the form submission
 // ---------------------------------------------------------------------------
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_contact'])) {
+/* Accept the post on any of its own fields, not just the button.
+   A button's name is only sent when the user activates it; when a script calls
+   form.submit() the browser leaves the submitter out entirely, and site JS does
+   exactly that here — the post arrived with fname/email/mobile/comment/captcha
+   and no submit_contact, so this handler was skipped and the page just
+   re-rendered an empty form with no message and no mail. A hidden field below
+   now carries the flag too, and this check no longer relies on it alone. */
+if ($_SERVER["REQUEST_METHOD"] == "POST"
+    && (isset($_POST['submit_contact']) || isset($_POST['fname']) || isset($_POST['comment']))) {
 
     $user_captcha = $_POST['captcha'] ?? '';
 
@@ -336,6 +344,10 @@ $meta_tag = $gmeta ? mysqli_fetch_assoc($gmeta) : [];
                             <?php endif; ?>
 
                             <form name="sform" method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" enctype="multipart/form-data">
+
+                                <!-- Hidden so the flag survives a scripted form.submit(), which
+                                     does not send the button that used to carry this name. -->
+                                <input type="hidden" name="submit_contact" value="1">
 
                                 <div class="fsia-float-group">
                                     <input type="text" name="fname" id="fname" class="fsia-float-input" placeholder=" " required="">
