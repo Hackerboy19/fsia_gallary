@@ -172,20 +172,34 @@ function fsia_smtp_send(array $cfg, $subject, $body, $replyTo = '')
 }
 
 /**
- * Try SMTP, then fall back to mail(). The fallback is expected to be
- * quarantined by Google for this domain, so it is a last resort that at least
- * leaves a trace rather than a silent loss.
+ * Try SMTP, then fall back to mail().
+ *
+ * The fallback's result is deliberately NOT reported as success. fsia.in sends
+ * as Google (MX on Google, SPF include:_spf.google.com, DMARC p=quarantine with
+ * strict alignment), so a message posted from the Plesk host fails SPF and DKIM
+ * and is quarantined — while mail() still returns true because the local MTA
+ * accepted it. Treating that true as delivery is what hid the original fault:
+ * the form said "sent" for weeks while nothing arrived. It is still attempted,
+ * in case the host is ever configured to relay properly, but only SMTP counts
+ * as delivered.
  */
 function fsia_send_contact_mail($cfg, $subject, $body, $replyTo, $logDir)
 {
-    if (is_array($cfg) && !empty($cfg['enabled']) && !empty($cfg['password'])
-        && strpos($cfg['password'], 'PASTE-') === false) {
+    $errLog = rtrim($logDir, '/') . '/contact-mail-errors.log';
+
+    $smtpConfigured = is_array($cfg) && !empty($cfg['enabled']) && !empty($cfg['password'])
+        && strpos($cfg['password'], 'PASTE-') === false;
+
+    if ($smtpConfigured) {
         $res = fsia_smtp_send($cfg, $subject, $body, $replyTo);
         if ($res['ok']) {
             return $res;
         }
-        fsia_log_line(rtrim($logDir, '/') . '/contact-mail-errors.log',
-            date('Y-m-d H:i:s') . ' SMTP FAILED: ' . $res['error']);
+        fsia_log_line($errLog, date('Y-m-d H:i:s') . ' SMTP FAILED: ' . $res['error']);
+    } else {
+        fsia_log_line($errLog, date('Y-m-d H:i:s')
+            . ' SMTP NOT CONFIGURED - create mail-config.php with a Google App Password.'
+            . ' Falling back to mail(), which Google quarantines for this domain.');
     }
 
     $to = is_array($cfg) && !empty($cfg['to']) ? implode(',', (array) $cfg['to']) : 'care@fsia.in';
@@ -203,10 +217,15 @@ function fsia_send_contact_mail($cfg, $subject, $body, $replyTo, $logDir)
     // the message fails SPF even harder.
     $ok = @mail($to, fsia_header_safe($subject), $body, $headers, '-f ' . fsia_header_safe($from));
 
-    if (!$ok) {
-        fsia_log_line(rtrim($logDir, '/') . '/contact-mail-errors.log',
-            date('Y-m-d H:i:s') . ' mail() returned false');
-    }
+    fsia_log_line($errLog, date('Y-m-d H:i:s') . ' mail() fallback returned '
+        . ($ok ? 'true (accepted locally; expect quarantine)' : 'false'));
 
-    return ['ok' => (bool) $ok, 'error' => $ok ? '' : 'mail() returned false', 'transport' => 'mail()'];
+    // Never report the fallback as delivered — see the note above.
+    return [
+        'ok'        => false,
+        'error'     => $smtpConfigured
+            ? 'SMTP failed; mail() fallback is not treated as delivery'
+            : 'SMTP not configured; mail() fallback is not treated as delivery',
+        'transport' => 'mail()',
+    ];
 }

@@ -57,8 +57,13 @@ if (!isset($connect) || !$connect) {
   background: linear-gradient(to top, #020617 0%, rgba(15,23,42,.4) 50%, rgba(15,23,42,0) 100%); }
 .fsia-smp .fsia-smp-card:hover .fsia-smp-veil { opacity: .9; }
 
+/* The badges and the caption block sit above the image link, so without this the
+   top strip and the whole bottom half of the card swallowed the click and the
+   card looked dead. They carry no links of their own, so they let clicks pass
+   through; the name anchor inside the caption takes its own back. */
 .fsia-smp .fsia-smp-badges { position: absolute; top: 1.25rem; left: 1.25rem; right: 1.25rem; z-index: 10;
-  display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; }
+  display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem;
+  pointer-events: none; }
 /* Category names run long ("The Real Super Heroes", "Forever International Award"),
    so the badge wraps to a second line instead of cutting the words off. */
 .fsia-smp .fsia-smp-cat { background: rgba(0,0,0,.4); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
@@ -71,7 +76,9 @@ if (!isset($connect) || !$connect) {
   border: 1px solid rgba(255,255,255,.2); white-space: nowrap; flex: 0 0 auto; align-self: flex-start; }
 
 .fsia-smp .fsia-smp-bottom { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; padding: 1.5rem;
-  z-index: 10; display: flex; flex-direction: column; justify-content: flex-end; }
+  z-index: 10; display: flex; flex-direction: column; justify-content: flex-end;
+  pointer-events: none; }
+.fsia-smp .fsia-smp-bottom a { pointer-events: auto; }
 .fsia-smp .fsia-smp-name { font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; font-weight: 700;
   color: #fff; margin: 0 0 .25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   text-shadow: 0 4px 6px rgba(0,0,0,.4); }
